@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Messaging app</title>
+        <script src="script.js"></script>
+    </head>
+    <body onload="initConvos()">
+        <div id="conversations" style="display: block">
+                <header class="header">
+                    <button onClick="onNewMessage()">New Message</button>
+                    <h1>Conversations</h1>
+                </header>
+            
+                <div>
+                    <ul id="conversationsList">
+                    </ul>
+                </div>
+        </div>
+
+        <div id="conversation" style="display: none">
+            <header class="header">
+                <button onClick="loadHomeScreen('conversation')">Back</button>
+                <div id="newMessage" style="display: none">
+                    <input id="addRecipient" value="recipient" type="text">
+                    <input onclick="addRecipient()" type="button" value="ADD">
+                </div>
+                <h1 id="recipients">Recipients: </h1>
+            </header>
+            
+            <div>
+                <ul id="messagesList">
+                </ul>
+                <input id="sendMessage" value="type your text here" type="text">
+                <input onchange="displayPreviewImage()" type="file" id="imageUpload" accept="image/*">
+                <div id="imagePrev"></div>
+                <button onclick="sendMessage()">SEND</button>
+            </div>
+            
+        </div>
+        
+    </body>
+</html>
