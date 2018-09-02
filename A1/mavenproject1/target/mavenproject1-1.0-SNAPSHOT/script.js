@@ -5,6 +5,7 @@ let time = new Date();
 let recipients = [];
 let currentConversation;
 contacts.push(new Person(1997, "Theodor"));
+let newMessageFlag; // 0 no new message flag, 1 new message flag
 
 function Person(id, name){
     this.id = id;
@@ -17,6 +18,7 @@ function Message(timestamp, person, message){
         return date.toString();
     };
     
+    this.decTimestamp = timestamp;
     this.timestamp = this.handleTimestamp(timestamp);
     this.person = person;
     this.message = message;
@@ -60,7 +62,7 @@ function initConvos(){
            time.getTime(), contacts[i], "Hello this is me"
        ));
    }
-
+   newMessageFlag = 0;
    setHomeScreen();
 }
 
@@ -68,9 +70,8 @@ function initConvos(){
 function onNewMessage(){
     console.log("onNewMessage()");
     cleanConversation();
-    toggleVisible("conversations");
-    toggleVisible("conversation");
-    document.getElementById("newMessage").style.display = "block";
+    toggleVisible("conversations", "conversation", "newMessage");
+    newMessageFlag = 1;
 }
 
 // adds the recipient
@@ -89,33 +90,36 @@ function addRecipient(){
         } 
     }
     if(!found){
-        contacts.push(new Person(contacts.length, recName))
-        conversations[conversations.length-1].recipients.push(contacts[contacts.length-1]);
+        contacts.push(new Person(contacts.length, recName));
         recipients.push(contacts[contacts.length-1]);
     }
     
 }
 
 // toggles visibility for messaging app components
-function toggleVisible(id){
-    console.log("toggleVisible()");
-    const el = document.getElementById(id);
-    if(el.style.display === "none"){
-        el.style.display = "block";
-    } else {
-        el.style.display = "none";
+function toggleVisible(/**/){
+    for(let i = 0; i < arguments.length; i++){
+        console.log("toggleVisibility("+arguments[i]+")");
+        const el = document.getElementById(arguments[i]);
+        if(el.style.display === "none"){
+            el.style.display = "block";
+        } else {
+            el.style.display = "none";
+        }
     }
+    
 }
 
 // triggers when back is pressed to show the homescreen
-function loadHomeScreen(elToHide){
+function loadHomeScreen(){
     console.log("loadHomeScreen()");
-    if(conversations[conversations.length-1].messages[0] === undefined){
-        conversations.pop([conversations.length-1]);
-    }
     setHomeScreen();
-    toggleVisible(elToHide);
-    toggleVisible("conversations");
+    if(newMessageFlag === 1){
+        newMessageFlag = 0;
+        toggleVisible("conversation", "conversations", "newMessage");
+    } else {
+        toggleVisible("conversation", "conversations");
+    }
 }
 
 // loads a conversation from homescreen
@@ -123,8 +127,9 @@ function loadConversation(conversation){
     console.log("loadConversation()");
     cleanConversation();
     currentConversation = conversation;
-    toggleVisible("conversations");
-    toggleVisible("conversation");
+    if(newMessageFlag !== 1){
+        toggleVisible("conversations", "conversation");
+    } 
     
     let recStr = "";
     for(let i = 0; i < conversation.recipients.length; i++){
@@ -133,19 +138,8 @@ function loadConversation(conversation){
     document.getElementById("recipients").innerHTML += recStr;
     
     // creates a list with messages
-    let mList = document.getElementById("messagesList");
     for(let i = 0; i < conversation.messages.length; i++){
-        let liEl = document.createElement("li");
-        mList.appendChild(liEl);
-        console.log(conversation.messages[i].imgURL);
-        liEl.innerHTML = conversation.messages[i].person.name + ": " + conversation.messages[i].message + "  [" + conversation.messages[i].timestamp.toLocaleString() +  "]";
-        
-        if(conversation.messages[i].imgURL){
-            let img = document.createElement("img");
-            img.src = conversation.messages[i].imgURL;
-            img.height = 60;
-            liEl.appendChild(img);
-        }
+        addMessageToConversation(conversation.messages[i]);
     }
 }
 
@@ -196,8 +190,8 @@ function cleanConversation(){
 
 function sendMessage(){
     console.log("sendMessage()");
-    if(document.getElementById("newMessage").style.display === "block"){
-        document.getElementById("newMessage").style.display = "none";
+    if(newMessageFlag === 1){
+        toggleVisible("newMessage");
         let convo = checkIfConversationExist();
         if(convo){
             currentConversation = convo;
@@ -205,8 +199,12 @@ function sendMessage(){
         } else {
             conversations.push(new Conversation(conversations.length, []));
             currentConversation = conversations[conversations.length-1];
+            for(let i = 0; i < recipients.length; i++){
+                conversations[conversations.length-1].recipients.push(recipients[i]);
+            }  
         }
         recipients = [];
+        newMessageFlag = 0;
     }
     
     let message = document.getElementById("sendMessage").value;
@@ -220,22 +218,35 @@ function sendMessage(){
     }
     
     addMessageToConversation(currentConversation.messages[currentConversation.messages.length-1]);
+    
+    sortConversations(currentConversation);
+}
+
+function sortConversations(currentConvo){
+    conversations = conversations.reverse();
+    let ix = conversations.indexOf(currentConvo);
+    conversations.splice(ix, 1);
+    conversations.push(currentConvo);
+    conversations = conversations.reverse();
 }
 
 function checkIfConversationExist(){
+    recipients = recipients.sort();
     console.log("checkIfConversationExist()");
     for(let i = 0; i < conversations.length; i++){
+        let crep = conversations[i].recipients.sort();
         let counter = 0;
-        for(let j = 0; j < conversations[i].recipients.length; j++){
-            for(let k = 0; k < recipients.length; k++){
-                if(recipients[k].name === conversations[i].recipients[j].name){
+        if(crep.length === recipients.length){
+            for(let j = 0; j < crep.length; j++){
+                if(crep[j]===recipients[j]){
                     counter++;
                 }
             }
-        }
-        if(counter === conversations[i].recipients.length){
+            if(counter === recipients.length){
                 return conversations[i];
+            }
         }
+        
     }
     return null;
 }
@@ -250,8 +261,9 @@ function addMessageToConversation(currentMessage){
             let img = document.createElement("img");
             img.src = currentMessage.imgURL;
             img.height = 60;
+            img.class = "imgMessage";
             liEl.appendChild(img);
-        }
+    }
 }
 
 function displayPreviewImage(){
@@ -264,3 +276,4 @@ function displayPreviewImage(){
     img.onload = () => (window.URL.revokeObjectURL(this.src));
     divImgPrv.appendChild(img);
 }
+
